@@ -1,0 +1,152 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  users     Membership[]
+  clients   Client[]
+  prospects Prospect[]
+  contracts Contract[]
+  tasks     Task[]
+  messages  Message[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model User {
+  id            String        @id @default(cuid())
+  email         String        @unique
+  fullName      String
+  memberships   Membership[]
+  tasks         Task[]
+  messages      Message[]
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+}
+
+model Membership {
+  id             String       @id @default(cuid())
+  user           User         @relation(fields: [userId], references: [id])
+  userId         String
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  role           Role
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+enum Role {
+  ADMIN
+  ADVISOR
+  SUPPORT
+}
+
+model Client {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  fullName       String
+  email          String?
+  phone          String?
+  tags           String[]
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+  contracts      Contract[]
+  claims         Claim[]
+}
+
+model Prospect {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  fullName       String
+  email          String?
+  phone          String?
+  source         String?
+  stage          PipelineStage @default(NEW)
+  ownerId        String?
+  value          Float?       // valeur estimée
+  nextActionAt   DateTime?
+  tags           String[]
+  notes          String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+enum PipelineStage {
+  NEW
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATION
+  WON
+  LOST
+}
+
+model Contract {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  client         Client       @relation(fields: [clientId], references: [id])
+  clientId       String
+  type           String       // auto, habitation, vie...
+  number         String?
+  renewalDate    DateTime?
+  premium        Float?
+  status         ContractStatus @default(ACTIVE)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+enum ContractStatus {
+  ACTIVE
+  CANCELLED
+  EXPIRED
+}
+
+model Claim {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  client         Client       @relation(fields: [clientId], references: [id])
+  clientId       String
+  description    String
+  status         String       // ouvert/fermé
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Task {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  title          String
+  dueAt          DateTime?
+  done           Boolean      @default(false)
+  assignee       User?        @relation(fields: [assigneeId], references: [id])
+  assigneeId     String?
+  relatedProspectId String?
+  relatedClientId   String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id])
+  organizationId String
+  to             String
+  channel        String       // email, sms, portal
+  subject        String?
+  body           String
+  relatedClientId   String?
+  relatedProspectId String?
+  createdAt      DateTime     @default(now())
+}
